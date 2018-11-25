@@ -84,8 +84,8 @@ class SimpleAsyncServer:
                     resp_list.append("\n\n")
                     resp = "".join(resp_list)
                     self.log_it(f"!! Send to {client_addr}: {resp}", iclient_color, client_log_ident)
-                    # writer.write(resp.encode())
-                    writer.write(b"error\nlol\n\n")
+                    writer.write(resp.encode())
+                    # writer.write(b"error\nlol\n\n")
                     await writer.drain()
         except asyncio.TimeoutError:
             self.log_it(f"!!! TimeOut {client_addr}", iclient_color, client_log_ident)

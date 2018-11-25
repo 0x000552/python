@@ -38,11 +38,20 @@ class Client:
     def get(self, request):
         try:
             self.sock.sendall(f"get {request}\n".encode())
-            f_resp = self._rcv_msg_response()
-        finally:
+            msg = self._rcv_msg_response()
+        except Exception:
             self.server_shutdown()
-        print(f_resp)  # DEBUG
+
         metric_dict = dict()
+        if msg:
+            msgs = msg.decode().split('\n')
+            for metrics in msgs:
+                metric = metrics.split(' ')
+                if not metric_dict.get(metric[0]):
+                    metric_dict[metric[0]] = list()
+                metric_dict[metric[0]].append((metric[1], metric[2]))
+        print(metric_dict)  # DEBUG
+        return metric_dict
 
 
 
@@ -51,13 +60,6 @@ class Client:
             str(int(time.time()))
         pass
 
-    def _parse_response(self, resp):
-        """ Parsing response
-
-        """
-
-        while True:
-            resp.find(self.BS_END_OF_)
 
 
     def _rcv_msg_response(self):
@@ -107,6 +109,5 @@ if __name__ == "__main__":  # DEBUG
         client = Client("localhost", 10_342)
         client.get("*")
     except KeyboardInterrupt:
-        self.sock.close()
         print("KeyboardInterrupt was caught")
         client.server_shutdown()
