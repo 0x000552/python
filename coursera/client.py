@@ -7,8 +7,6 @@ Client Metrics.
 import socket
 import time
 
-import color_logger  # DEBUG
-log_it = color_logger.ColorLogger().log_it  # DEBUG
 
 class ClientError(Exception):
     def __init__(self, *args, **kwargs):
@@ -25,8 +23,7 @@ class Client:
     NL_BS_EOR = -len(BS_END_OF_RESPONSE)  # Negative Len
     BS_END_OF_LINE = b"\n"
 
-    SRV_RS_TIME = 3  # Server Response Timeout in sec (not eql to __init__.timeout)
-    MAX_ITER_RESP = 999  # Maximum iteration which we can do while waiting for response
+    MAX_ITER_RESP = 100  # Maximum iteration which we can do while waiting for response
 
     def __init__(self, srv_ip, srv_port, timeout=None):
         self.sock = socket.create_connection((srv_ip, srv_port), timeout)
@@ -36,11 +33,11 @@ class Client:
         print("Socket has been closed")
 
     def get(self, request):
-        try:
-            self.sock.sendall(f"get {request}\n".encode())
-            msg = self._rcv_msg_response()
-        except Exception:
-            self.server_shutdown()
+        #try:
+        self.sock.sendall(f"get {request}\n".encode())
+        msg = self._rcv_msg_response()
+        #except Exception:
+        #   self.server_shutdown()
 
         metric_dict = dict()
         if msg:
@@ -49,16 +46,16 @@ class Client:
                 metric = metrics.split(' ')
                 if not metric_dict.get(metric[0]):
                     metric_dict[metric[0]] = list()
-                metric_dict[metric[0]].append((metric[1], metric[2]))
-        print(metric_dict)  # DEBUG
+                metric_dict[metric[0]].append((int(metric[2]), float(metric[1])))
         return metric_dict
 
 
-
-    def put(self, timestamp=None):
+    def put(self, key, value, timestamp=None):
         if not timestamp:
-            str(int(time.time()))
-        pass
+            timestamp = str(int(time.time()))
+        self.sock.sendall(f"put {key} {value} {timestamp}\n".encode())
+
+        self._rcv_msg_response()
 
 
 
@@ -78,17 +75,16 @@ class Client:
         buff.append(self.sock.recv(1024))
         if buff[0]:
             for _, cb_answer in self.DBS_CORRECT_BEG_ANSWER.items():
-                fca = buff[0].find(cb_answer, None, len(cb_answer))  # Find Correct Answer
-                if fca >= 0:
-                    log_it(f"{buff[0]} MESSAGE RECEIVED", 0)  # DEBUG
-
+                lcb_answer = len(cb_answer)
+                chk_cb = buff[0].find(cb_answer, None, lcb_answer)  # Check the Correctness of the Beginning
+                if chk_cb >= 0:
                     # Check fullness of response
                     for i in range(self.MAX_ITER_RESP):
                         #  if last (len of end of response) symbols == end of response:
                         #      we've been reached End Of Response
                         if buff[i].find(self.BS_END_OF_RESPONSE, self.NL_BS_EOR) >= 0:
                             # join and strip response (remove service info from begin and end)
-                            buff = b"".join(buff)[len(cb_answer): self.NL_BS_EOR]  # !!! NOW buff is str (not list) !!!
+                            buff = b"".join(buff)[lcb_answer: self.NL_BS_EOR]  # !!! NOW buff is str (not list) !!!
 
                             # Error handling
                             if cb_answer == self.DBS_CORRECT_BEG_ANSWER['ERR']:
@@ -103,7 +99,7 @@ class Client:
                     raise ClientError("Incorrect response! Maximum iteration has been reached!")
         raise ClientError(f"Incorrect response: {'None' if buf[0] is None else buf[0]}")  # TODO Should I catch it here?
 
-
+"""
 if __name__ == "__main__":  # DEBUG
     try:
         client = Client("localhost", 10_342)
@@ -111,3 +107,4 @@ if __name__ == "__main__":  # DEBUG
     except KeyboardInterrupt:
         print("KeyboardInterrupt was caught")
         client.server_shutdown()
+"""

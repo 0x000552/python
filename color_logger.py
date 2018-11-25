@@ -56,14 +56,14 @@ class ColorLogger:
         if icolor in self.D_iCOLOR.keys():
             if (icolor // 10) < 0:
                 # Service colors
-                msg = f"\n{' ' * indent}{self.D_iCOLOR[icolor]} {datetime.now().strftime('%X')} {message}\033[0m\n"
+                msg = f"\n{' ' * indent}{self.D_iCOLOR[icolor]} {datetime.now().strftime('%X')} {message!r}\033[0m\n"
             else:
                 # Regular colors
-                msg = f"{' ' * indent}{self.D_iCOLOR[icolor]} {datetime.now().strftime('%X')} {message}\033[0m"
+                msg = f"{' ' * indent}{self.D_iCOLOR[icolor]} {datetime.now().strftime('%X')} {message!r}\033[0m"
         else:
             # Without color
-            msg = f"{' ' * indent}{datetime.now().strftime('%X')} {message}"
-        print(r"".join(msg), file=self.LOG_STREAM)
+            msg = f"{' ' * indent}{datetime.now().strftime('%X')} {message!r}"
+        print(msg, file=self.LOG_STREAM)
 
 
 if __name__ == "__main__":
