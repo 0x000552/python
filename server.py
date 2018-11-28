@@ -81,9 +81,11 @@ class Server:
                             for tuple_metric in list_metrics:
                                 list_resp.append(b"\n%s %s %s" % (key, tuple_metric[0], tuple_metric[1]))
                     else:
+                        # If metric with such key exists, list_metrics isn't empty
                         list_metrics = self.dict_metrics.get(buff[1])
-                        for tuple_metric in list_metrics:
-                            list_resp.append(b"\n%s %s %s" % (buff[1], tuple_metric[0], tuple_metric[1]))
+                        if list_metrics:
+                            for tuple_metric in list_metrics:
+                                list_resp.append(b"\n%s %s %s" % (buff[1], tuple_metric[0], tuple_metric[1]))
 
                     list_resp.append(self._BS_END_OF_RESP)
 
@@ -93,14 +95,13 @@ class Server:
 
                 elif len_buff == 4 and buff[0] == b"put":
                     # PUT ITEM
+                    metric_not_exist = True
                     # Create list in dict if it's not existing
                     if not self.dict_metrics.get(buff[1]):
                         self.dict_metrics[ buff[1] ] = list()
-
-                    # Check if metric already exists (check by timestamp)
-                    metric_not_exist = True
-                    for list_metrics in self.dict_metrics[ buff[1] ]:
-                        for tuple_metric in list_metrics:
+                    else:
+                        # Check if metric already exists (check by timestamp)
+                        for tuple_metric in self.dict_metrics[ buff[1] ]:
                             if tuple_metric[0] == buff[3]:
                                 metric_not_exist = False
 
@@ -147,6 +148,7 @@ def run_server(host, port):
         loop.close()
 
 
-
+"""
 if __name__  == "__main__":
     run_server('localhost', 8_888)
+"""

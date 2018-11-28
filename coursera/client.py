@@ -101,7 +101,7 @@ class Client:
                     raise ClientError("Incorrect response! Maximum iteration has been reached!")
         raise ClientError(f"Incorrect response: {'None' if len(buff) else buf[0]}")  # TODO Should I catch it here?
 
-
+"""
 if __name__ == "__main__":  # DEBUG
     try:
         client = Client("localhost", 10_342)
@@ -109,3 +109,4 @@ if __name__ == "__main__":  # DEBUG
     except KeyboardInterrupt:
         print("KeyboardInterrupt was caught")
         client.client_shutdown()
+"""
