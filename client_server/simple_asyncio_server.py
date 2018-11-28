@@ -40,6 +40,9 @@ class SimpleAsyncServer:
             self.log_it(f"Server '{self.srv_id}' shutdown ({self.srv_ip} : {self.srv_port:,})", 1)
             self._srv_id -= 1
 
+    def start(self):
+        return asyncio.create_task(self._server_start())
+
     async def _coursera_client_handler(self, reader, writer):
         iclient_color = self.logger.inext_regular_color
         self._client_log_ident += 2
@@ -47,15 +50,15 @@ class SimpleAsyncServer:
 
         response_dict = {
             'palm.cpu': [
-                (1150864247, 0.5),
-                (1150864248, 0.5)
+                (0.5, 1150864247),
+                (0.5, 1150864248)
             ],
             'eardrum.cpu': [
-                (1150864250, 3.0),
-                (1150864251, 4.0)
+                (3.0, 1150864250),
+                (4.0, 1150864251)
             ],
             'eardrum.memory': [
-                (1503320872, 4200000.0)
+                (4200000.0, 1503320872)
             ]
         }
 
@@ -93,9 +96,6 @@ class SimpleAsyncServer:
             self.log_it(f"!!! Closing stream {client_addr}", iclient_color, client_log_ident)
             writer.close()
             await writer.wait_closed()
-
-    def start(self):
-        return asyncio.create_task(self._server_start())
 
 
 # main()

@@ -1,112 +1,152 @@
 """
-Simple async server written on asyncio
+Simple async server written on asyncio (python 3.6)
+Coursera Final project
 
 It's using my own logger, send
 
-21.11.2018 by 0x000552
+28.11.2018 by 0x000552
 """
 import asyncio
 from color_logger import ColorLogger
 
 
-class SimpleAsyncServer:
-    _srv_id = 0
-    _client_log_ident = 0
-    _CLIENT_TIMEOUT = 15
+class Server:
+    """
+    Written for coursera final project.
+    Read _client_handler doc str for more info
+    """
+    _BS_END_OF_RESP = b"\n\n"
+    _BS_BEG_ERR = b"error\n"
+    _BS_RESP_SUCCESS = b"ok"
 
-    def __init__(self, srv_ip="0.0.0.0", srv_port=10_342, logger=None):
-        self.srv_ip = srv_ip
-        self.srv_port = srv_port
+    def __init__(self, host, port):
+        self.host = host
+        self.port = port
+        self.dict_metrics = dict()
+        self.loop = asyncio.get_event_loop()
 
-        self.srv_id = self._srv_id
-        self._srv_id += 1
+        self._start_srv()
 
-        if not logger:
-            logger = ColorLogger()
-        self.logger = logger
-        # set logging func
-        self.log_it = logger.log_it
+    def _start_srv(self):
+        print(f"Starting server {self.host}: {self.port}")
+        cor = asyncio.start_server(self._client_handler,
+                                   self.host,
+                                   self.port,
+                                   loop=self.loop)
+        self.srv = self.loop.run_until_complete(cor)
 
-    async def _server_start(self):
-        try:
-            self.log_it(f"Server '{self.srv_id}' start ({self.srv_ip} : {self.srv_port:,})", 0)
-            # Coursera Client Handler!
-            srv = await asyncio.start_server(self._coursera_client_handler, self.srv_ip, self.srv_port)
-            async with srv:
-                await srv.serve_forever()
-                self.log_it("main() exit", 4)  # DEBUG
 
-        finally:
-            self.log_it(f"Server '{self.srv_id}' shutdown ({self.srv_ip} : {self.srv_port:,})", 1)
-            self._srv_id -= 1
+    def stop(self):
+        print("Stopping server")
+        self.srv.close()
+        asyncio.wait(self.srv.wait_closed())
 
-    async def _coursera_client_handler(self, reader, writer):
-        iclient_color = self.logger.inext_regular_color
-        self._client_log_ident += 2
-        client_log_ident = self._client_log_ident
 
-        response_dict = {
-            'palm.cpu': [
-                (1150864247, 0.5),
-                (1150864248, 0.5)
-            ],
-            'eardrum.cpu': [
-                (1150864250, 3.0),
-                (1150864251, 4.0)
-            ],
-            'eardrum.memory': [
-                (1503320872, 4200000.0)
-            ]
+
+    async def _client_handler(self, reader, writer):
+        """
+        Expected data:
+            get <key>/*\n
+            put <key> <value> <timestamp>\n
+
+        In dict we swap <value> and <timestamp>:
+        {
+            <key>: [
+                    (<timestamp>, <value>),
+                    ...
+                   ],
+            ...
         }
-
+        :param reader:
+        :param writer:
+        :return:
+        """
         try:
-            client_addr = writer.get_extra_info("peername")
-            client_addr = f"({client_addr[0]}: {client_addr[1]:,})"
-
-            self.log_it(f"!!! New client: {client_addr}", iclient_color, client_log_ident)
             while True:
-                data = await asyncio.wait_for(reader.readline(), timeout=self._CLIENT_TIMEOUT)
-
-                if not data:
-                    self.log_it(f"!!! Connection closed by client {client_addr}", iclient_color, client_log_ident)
+                buff = await reader.readline()
+                if not buff:
                     break
+                buff = buff.strip().split(b' ')
+                print(f"Received: {buff}")
+                len_buff = len(buff)
 
-                self.log_it(f"Get message {client_addr}: {data!r}", iclient_color, client_log_ident)
-                if data == b"exit\n":
-                    return
-                if data == b"get *\n":
-                    resp_list = list("ok", )
-                    for k_resp, v_resp in response_dict.items():
-                        for metrics in v_resp:
-                            resp_list.append(f"\n{k_resp}")
-                            for metric in metrics:
-                                resp_list.append(f" {metric}")
-                    resp_list.append("\n\n")
-                    resp = "".join(resp_list)
-                    self.log_it(f"!! Send to {client_addr}: {resp}", iclient_color, client_log_ident)
-                    writer.write(resp.encode())
-                    # writer.write(b"error\nlol\n\n")
-                    await writer.drain()
-        except asyncio.TimeoutError:
-            self.log_it(f"!!! TimeOut {client_addr}", iclient_color, client_log_ident)
+                if len_buff == 2 and buff[0] == b"get":
+                    # GET ITEMS
+
+                    # We always should response as success
+                    list_resp = [self._BS_RESP_SUCCESS, ]
+
+                    if buff[1] == b"*":
+                        for key, list_metrics in self.dict_metrics.items():
+                            for tuple_metric in list_metrics:
+                                list_resp.append(b"\n%s %s %s" % (key, tuple_metric[0], tuple_metric[1]))
+                    else:
+                        list_metrics = self.dict_metrics.get(buff[1])
+                        for tuple_metric in list_metrics:
+                            list_resp.append(b"\n%s %s %s" % (buff[1], tuple_metric[0], tuple_metric[1]))
+
+                    list_resp.append(self._BS_END_OF_RESP)
+
+                    # Protocol said: Not found -> SUCCESS RESPONSE
+                    print(f"Sending: {list_resp}")
+                    writer.write(b"".join(list_resp))
+
+                elif len_buff == 4 and buff[0] == b"put":
+                    # PUT ITEM
+                    # Create list in dict if it's not existing
+                    if not self.dict_metrics.get(buff[1]):
+                        self.dict_metrics[ buff[1] ] = list()
+
+                    # Check if metric already exists (check by timestamp)
+                    metric_not_exist = True
+                    for list_metrics in self.dict_metrics[ buff[1] ]:
+                        for tuple_metric in list_metrics:
+                            if tuple_metric[0] == buff[3]:
+                                metric_not_exist = False
+
+                    if metric_not_exist:
+                        self.dict_metrics[ buff[1] ].append( (buff[3], buff[2]) )
+                        print(f"Chaotic: {self.dict_metrics})")
+                        self._sort_dict_metrics()
+                        print(f"Sorted:  {self.dict_metrics}")
+                    writer.write(b"%s%s" % (self._BS_RESP_SUCCESS, self._BS_END_OF_RESP))
+
+                else:
+                    writer.write(b"%swrong command%s" % (self._BS_BEG_ERR, self._BS_END_OF_RESP))
+
+                await writer.drain()
+        except asyncio.CancelledError:
+            pass
         finally:
-            self.log_it(f"!!! Closing stream {client_addr}", iclient_color, client_log_ident)
+            print("Closing connection")
             writer.close()
-            await writer.wait_closed()
 
-    def start(self):
-        return asyncio.create_task(self._server_start())
+    def _sort_dict_metrics(self):  # sync?
+        """
+        For each dict element (list of tuples)
+            Sort it by timestamp (second element in tuple)
+        """
+
+        for k in self.dict_metrics:
+            self.dict_metrics[k].sort(key=lambda metric_list: metric_list[0])
 
 
-# main()
-async def main():
-    srv1 = SimpleAsyncServer(logger=clog)
-    await srv1.start()
-
-
-if __name__ == "__main__":
-    clog = ColorLogger()
+def run_server(host, port):
+    loop = asyncio.get_event_loop()
+    s = Server(host, port)
     try:
-        asyncio.run(main())
+        loop.run_forever()
     except KeyboardInterrupt:
-        clog.log_it("KeyboardInterrupt exception caught", 2)
+        pass
+    finally:
+        for task in asyncio.Task.all_tasks():
+            task.cancel()
+            loop.run_until_complete(task)
+
+        s.stop()
+        loop.close()
+
+
+
+if __name__  == "__main__":
+    run_server('localhost', 8_888)
