@@ -7,7 +7,6 @@ It's using my own logger, send
 28.11.2018 by 0x000552
 """
 import asyncio
-from color_logger import ColorLogger
 
 
 class Server:
@@ -106,7 +105,7 @@ class Server:
                                 metric_not_exist = False
 
                     if metric_not_exist:
-                        self.dict_metrics[ buff[1] ].append( (buff[3], buff[2]) )
+                        self.dict_metrics[ buff[1] ].append( (buff[2], buff[3]) )
                         print(f"Chaotic: {self.dict_metrics})")
                         self._sort_dict_metrics()
                         print(f"Sorted:  {self.dict_metrics}")
@@ -129,7 +128,7 @@ class Server:
         """
 
         for k in self.dict_metrics:
-            self.dict_metrics[k].sort(key=lambda metric_list: metric_list[0])
+            self.dict_metrics[k].sort(key=lambda metric_list: metric_list[1])
 
 
 def run_server(host, port):
