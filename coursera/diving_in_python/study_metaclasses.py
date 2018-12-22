@@ -8,7 +8,7 @@ class MyMetaClass(type):
     """
 
     def __new__(mcls, clsname, bases, dict):
-        print("In MyMetaClass.__new__()")
+        print(f"In MyMetaClass.__new__(): {dict}")
         for key, val in dict.items():
             if isinstance(val, list):
                 dict[key] = tuple(val)
@@ -23,6 +23,9 @@ class TestClass(metaclass=MyMetaClass):
     def __new__(cls, *args, **kwargs):
         print("in TestClass.__new__()")
         return super().__new__(cls, *args, **kwargs)
+
+    def func(self):
+        pass
 
 TestClass()
 print(f"\nTestClass: list_ {TestClass.list_.__class__}._class_ == {TestClass.list_}")
