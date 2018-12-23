@@ -12,8 +12,9 @@ from collections import deque
 
 class CatAndMouse:
     rbt = "\033[91;5m"  # red blink
+    rt = "\033[91m"  # red
+    gt = "\033[32m"  # green
     clt = "\033[0m"  # reset text decoration
-    len_rbt_clt = len(rbt) + len(clt)
 
     CAT = f"C"
     MOUSE = "M"
@@ -84,16 +85,18 @@ class CatAndMouse:
                         hole.remove(mouse)
             moved_mouses.clear()
 
-        print("\n\n       Result:   ", end='')
-        self._update_field_graphic()
+        print("\n")
         if any_alive_mouse:
-            print("Algorithm FAILED!")
+            print(f"{self.rt}Algorithm FAILED!{self.clt}")
         else:
-            print("All mouse caughted")
+            print(f"{self.gt}All mouses was caught{self.clt}")
+        print("\n       Result:   ", end='')
+        self._update_field_graphic()
+
 
     def _update_field_graphic(self, caught_mouses=[]):
         # mmih =  max(map(max, self._holes)) * self.WOMS  # maximum mouses in hole  # TODO should find maximum possible...
-        mmih = 16
+        mmih = 30
         for hole in self._holes:
             moc = []
             for mouse_or_cat in hole:
@@ -114,8 +117,10 @@ class CatAndMouse:
 
 
 def main():
-    al = input("Algorithm ('2344' Cat will try 2,3,4,4 holes.): ")
+    al = input("\n\n\nAlgorithm (ex. '2344' Cat will try 2,3,4,4 holes): ")
+    print("\n\n\n\n")
     CatAndMouse(4, al).start()
+    print("\n\n\n\n")
 
 
 if __name__ == "__main__":
